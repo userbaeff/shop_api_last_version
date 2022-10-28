@@ -7,6 +7,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .send_email import send_confirmation_mail, send_code_password_reset
 from . import serializers
+from shopAPI.tasks import send_email_task
 
 
 User = get_user_model()
@@ -20,9 +21,18 @@ class RegistrationView(APIView):
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
             if user:
-                send_confirmation_mail(user.email, user.activation_code)
-                return Response(serializer.data, status=201)
-            return Response ('Bad request', status=401)
+                # send_confirmation_mail(user.email, user.activation_code)
+                send_email_task.delay(user.email, user.activation_code)
+            return Response(serializer.data, status=201)
+        return Response ('Bad request', status=401)
+
+
+class FollowSpamApi(APIView):
+    def post(self, request):
+        serializer = serializers.SpamViewSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(email=request.user.email)
+        return Response('Followed to spam!', 201)
 
 
 class ActivationView(APIView):

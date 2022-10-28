@@ -31,3 +31,4 @@ def send_code_password_reset(user):
         [email],
         fail_silently=False
     )
+
